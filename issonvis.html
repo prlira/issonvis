@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISSonVIS 2026 Reflection — Emotion and Map: Affective Dimension of Visualization</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0d1b3e;
+    --paper: #f4f6fb;
+    --cream: #e8ecf5;
+    --accent: #d41515;
+    --blue-dark: #132158;
+    --blue-mid: #1e3a8a;
+    --blue-light: #3b5fc0;
+    --red-vivid: #e31c1c;
+    --red-deep: #a50e0e;
+    --muted: #4a5980;
+    --border: #c5cde8;
+    --white: #ffffff;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.75;
+    font-size: 17px;
+  }
+
+  /* HEADER — replicates the poster gradient: deep blue top-left → red bottom-right */
+  header {
+    background: linear-gradient(135deg, #132158 0%, #1e3a8a 35%, #c0392b 70%, #a50e0e 100%);
+    color: var(--white);
+    padding: 4rem 2rem 3rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      0deg, transparent, transparent 39px,
+      rgba(255,255,255,0.025) 39px, rgba(255,255,255,0.025) 40px
+    ),
+    repeating-linear-gradient(
+      90deg, transparent, transparent 39px,
+      rgba(255,255,255,0.025) 39px, rgba(255,255,255,0.025) 40px
+    );
+  }
+
+  .kicker {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #ff6b6b;
+    margin-bottom: 1rem;
+    position: relative;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 400;
+    line-height: 1.15;
+    position: relative;
+    max-width: 700px;
+    margin: 0 auto 1rem;
+    color: var(--white);
+  }
+
+  header h1 em {
+    font-style: italic;
+    color: #ff9a9a;
+  }
+
+  .byline {
+    font-size: 13px;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.05em;
+    position: relative;
+    margin-top: 1.5rem;
+  }
+
+  .byline span {
+    color: rgba(255,255,255,0.85);
+    font-weight: 500;
+  }
+
+  /* MAP SECTION */
+  .map-section {
+    background: var(--cream);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .map-label {
+    text-align: center;
+    padding: 2rem 2rem 1rem;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  #map {
+    height: 420px;
+    width: 100%;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    padding: 1.25rem 2rem 1.5rem;
+    justify-content: center;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dot-d1 { background: #d41515; }
+  .dot-d2 { background: #1e3a8a; }
+
+  /* CONTENT */
+  .content-wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+  }
+
+  .intro-block {
+    border-left: 3px solid var(--accent);
+    padding-left: 1.5rem;
+    margin-bottom: 3rem;
+  }
+
+  .intro-block p {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    line-height: 1.7;
+    color: var(--ink);
+    font-style: italic;
+  }
+
+  /* DAY HEADINGS */
+  .day-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 3.5rem 0 2rem;
+  }
+
+  .day-pill {
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 2px;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  .day-pill.d2 { background: #2c3e7a; }
+
+  .day-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 400;
+  }
+
+  /* SPEAKER CARDS */
+  .speaker-block {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 2.5rem;
+    background: #fff;
+  }
+
+  .speaker-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--cream);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .speaker-flag {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .speaker-meta { flex: 1; }
+
+  .speaker-name {
+    font-weight: 500;
+    font-size: 15px;
+    margin-bottom: 2px;
+  }
+
+  .speaker-name a {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border);
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .speaker-name a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .speaker-affil {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .speaker-talk {
+    font-size: 12px;
+    color: var(--accent);
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  .speaker-body {
+    padding: 1.25rem 1.25rem 1.25rem;
+    font-size: 15.5px;
+    line-height: 1.8;
+    color: #2a2520;
+  }
+
+  .speaker-body p + p { margin-top: 0.9rem; }
+
+  /* PULL QUOTES */
+  blockquote {
+    border-left: 3px solid var(--gold);
+    padding: 0.75rem 1.25rem;
+    margin: 2rem 0;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.05rem;
+    color: var(--muted);
+    background: var(--cream);
+    border-radius: 0 4px 4px 0;
+  }
+
+  /* CLOSING */
+  .closing {
+    border-top: 1px solid var(--border);
+    padding-top: 2.5rem;
+    margin-top: 3rem;
+  }
+
+  .closing h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    margin-bottom: 1.25rem;
+  }
+
+  .closing p {
+    margin-bottom: 1rem;
+    font-size: 16px;
+    line-height: 1.85;
+  }
+
+  /* FOOTER */
+  footer {
+    background: var(--ink);
+    color: rgba(247,244,239,0.5);
+    text-align: center;
+    padding: 2rem;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  footer a { color: rgba(247,244,239,0.7); }
+
+  /* DIVIDER */
+  .ornament {
+    text-align: center;
+    color: var(--border);
+    font-size: 20px;
+    margin: 2rem 0;
+    letter-spacing: 0.5em;
+  }
+
+  /* Leaflet popup override */
+  .leaflet-popup-content-wrapper {
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+  }
+  .leaflet-popup-content { margin: 10px 14px; line-height: 1.5; }
+  .popup-name { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
+  .popup-talk { font-style: italic; color: #888; font-size: 12px; }
+  .popup-inst { font-size: 12px; color: #555; margin-top: 4px; }
+
+  @media (max-width: 600px) {
+    .map-legend { flex-direction: column; align-items: flex-start; }
+    #map { height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="kicker">International Spring School on Visualization · University of Olomouc 2026</p>
+  <h1>Emotions &amp; Emotion and Maps:<br><em>The Affective Dimension of Visualization</em></h1>
+  <p class="byline"><br>
+  by <span>Pamela Lira - Copernicus Master in Digital Earth</span></p>
+</header>
+
+<!-- MAP -->
+<div class="map-section">
+  <p class="map-label">Where the speakers come from — Day 1 in red · Day 2 in blue</p>
+  <div id="map"></div>
+  <div class="map-legend">
+    <div class="legend-item"><div class="legend-dot dot-d1"></div> Day 1 speaker</div>
+    <div class="legend-item"><div class="legend-dot dot-d2"></div> Day 2 speaker</div>
+  </div>
+</div>
+
+
+
+<!-- MAIN CONTENT -->
+<div class="content-wrap">
+
+  <div class="intro-block">
+
+  <p>
+    When I produced my countermap for <em>Climate Futures 2075</em>, I had one mission in mind:
+    reimagine what my region would look like 50 years from now.
+  </p>
+
+
+  <div style="margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap;">
+
+    <a
+      href="https://climatefutures.art/kartang-isip"
+      target="_blank"
+      style="
+        padding: 12px 20px;
+        background: #111;
+        color: white;
+        text-decoration: none;
+        border-radius: 999px;
+        font-family: Arial, sans-serif;
+        font-size: 15px;
+        transition: 0.3s;
+      "
+    >
+      🗺️ Explore Project KARTANG-ISIP here
+    </a>
+
+  </div>
+  
+
+</div>
+<p>
+    I wanted to create a futuristic map layered with elements that would move people to act.
+    At the heart of this work is countermapping which is a method of reclaiming space and voice for
+    vulnerable communities whose lives are erased in conventional maps. My project
+    <strong>KARTANG-ISIP</strong> disrupts that narrative by charting a different kind of map:
+    one where Filipino communities are no longer victims of calamity but architects of their future.
+    The accompanying map was built from Copernicus DEM data and reimagines Eastern Visayas through
+    animated geovisualization. It is an ode to the 1734 Murillo-Velarde map, hailed as the
+    “Mother of all Philippine Maps”, and uses speculative storytelling to imagine possible
+    Philippine futures.
+  </p>
+  <p style="margin-top:1rem">Now in pursuing my Geovisualization and Geocommunication Track, the International Spring School on Visualization hosted by the University of Olomouc helped solidify the concepts I was reaching for and gave theoretical scaffolding to what I had been innately trying to express through my countermap. It was during this 2-day session I managed to put a name to what were "gut feelings" and "principles" that served as a matrix for my work.</p>
+<img src="documentation (1).jpeg" alt="Photo of the first day of the International Spring School on Visualization." style="width: 500px; height: auto;">
+  <!-- DAY 1 -->
+  <div class="day-header">
+    
+    <p></p>
+    <span class="day-pill">Day 1</span>
+    <span class="day-title">Wednesday 1st April — Mapping &amp; the Senses</span>
+  </div>
+
+
+  <!-- GARTNER -->
+  <div class="speaker-block">
+    <div class="speaker-header">
+      <div class="speaker-flag">🇦🇹</div>
+      <div class="speaker-meta">
+        <div class="speaker-name"><a href="https://cartography.tuwien.ac.at/georg-gartner/" target="_blank">Georg Gartner</a></div>
+        <div class="speaker-affil">Professor of Cartography, Vienna University of Technology · President, International Cartographic Association</div>
+        <div class="speaker-talk">Emotion in Cartographic Theory: Epistemological and Semiotic Considerations</div>
+      </div>
+    </div>
+    <div class="speaker-body">
+      <p>One of the better learnings I had in Georg Gartner's opening lecture was his emphasis on the affective dimension of cartography. This is the idea that mapping is symbiotic with human experience and that people do not process spatial information through purely rational means. We need to contextualize. We need to feel. He walked us through four paradigms of cartography: emotional impact, aesthetical appeal, emotional meaning, and narrative and storytelling. There were also other dimensions like personal relevance, engagement, empathy, and cognitive load, which helped me understand my own mapmaking choices.</p>
+    </div>
+  </div>
+
+  <!-- PÁNEK -->
+  <div class="speaker-block">
+    <div class="speaker-header">
+      <div class="speaker-flag">🇨🇿</div>
+      <div class="speaker-meta">
+        <div class="speaker-name"><a href="https://participatorymapping.icaci.org/author/jiri-panek/" target="_blank">Jiří Pánek</a></div>
+        <div class="speaker-affil">Associate Professor, Palacký University Olomouc · ICA Working Group on Participatory Mapping</div>
+        <div class="speaker-talk">Emotional Mapping — From the Theory to the Practice</div>
+      </div>
+    </div>
+    <div class="speaker-body">
+      <p>Professor Jiří Pánek talked about Emotional Mapping, where he dissected the relationship between geometry and meaning in a way that clicked immediately. Safety, he explained, is a point. Walkability improvement is a line. Public transport access is a polygon. Every map geometry has an attribution — and once you see it, you cannot unsee it.</p>
+    </div>
+  </div>
+
+  <!-- KESKIN -->
+  <div class="speaker-block">
+    <div class="speaker-header">
+      <div class="speaker-flag">🇹🇷</div>
+      <div class="speaker-meta">
+        <div class="speaker-name"><a href="https://drmervekeskin.wordpress.com/" target="_blank">Merve Keskin</a></div>
+        <div class="speaker-affil">Postdoctoral Researcher, Z_GIS — University of Salzburg · Vice Chair, ICA Commission on User Experience</div>
+        <div class="speaker-talk">Sensing Human, Sensing Environment and Personalizing Geo-Experiences</div>
+      </div>
+    </div>
+    <div class="speaker-body">
+      <p>Prof. Merve Keskin talked about her expertise in the cognitive and sensory mechanics of map-reading. Memory load intersects with cognitive task demand and emotional regulation. My main takeaway was that high cognitive load does not necessarily mean poor task performance — since it depends on the task type and the map feature at hand. Exploratory behavior shows up in gaze patterns while detail-oriented sensing surfaces in mouse movement. This takes me back to my experience using RealEye in an Advanced Cartography project.</p>
+    </div>
+  </div>
+
+  <blockquote>"A satirical map is still a power move — a distortion of reality dressed up as a joke, designed to make you laugh at someone — and to make that laughter feel like truth."</blockquote>
+
+  <!-- EDLER -->
+  <div class="speaker-block">
+    <div class="speaker-header">
+      <div class="speaker-flag">🇩🇪</div>
+      <div class="speaker-meta">
+        <div class="speaker-name"><a href="https://www.geographie.ruhr-uni-bochum.de/mitarbeiter/dennis_edler_00136.html.en" target="_blank">Dennis Edler</a></div>
+        <div class="speaker-affil">Senior Lecturer, Institute of Geography, Ruhr-University Bochum</div>
+        <div class="speaker-talk">Objectifying Space: Cartography Between Perception, Power, and Landscape Conflict</div>
+      </div>
+    </div>
+    <div class="speaker-body">
+      <p>Dennis Edler brought in Dahrendorf's Conflict Theory to swivel maps as instruments of power. Maps construct social realities and redistribute authority. My favorite quote was when he said maps help societies live with disagreement. The case of Palestine and Israel is one of the most visceral examples — the moment the UN drew its partition map in 1947, those lines became contested identity and ongoing conflict that continue to this day.</p>
+    </div>
+  </div>
+
+  <!-- HYPŠOVÁ -->
+  <div class="speaker-block">
+    <div class="speaker-header">
+      <div class="speaker-flag">🇨🇿</div>
+      <div class="speaker-meta">
+        <div class="speaker-name"><a href="https://www.researchgate.net/profile/Petra-Hypsova" target="_blank">Petra Hypšová</a></div>
+        <div class="speaker-affil">Assistant Professor, Department of Psychology, Palacký University Olomouc</div>
+        <div class="speaker-talk">Recognising Human Emotions, Recognising Maps: Why Emotion Recognition Ability May Matter in Map Reading</div>
+      </div>
+    </div>
+    <div class="speaker-body">
+      <p>Petra Hypšová rounded out the afternoon with a different perspective — decoding maps through ERA, Emotional Recognition Ability. She breaks maps into accuracy as signal and bias as noise. Frankly, her central provocation was radical: reading a map is in itself a psychological test. If we learn to filter the social noise, she suggested, we move closer to reducing the spatial noise.</p>
+    </div>
+  </div>
+
+  <!-- KVĚTOŇOVÁ -->
+  <div class="speaker-block">
+    <div class="speaker-header">
+      <div class="speaker-flag">🇨🇿</div>
+      <div class="speaker-meta">
+        <div class="speaker-name"><a href="https://geography.upol.cz/veronika-kvetonova-en" target="_blank">Veronika Květoňová</a></div>
+        <div class="speaker-affil">Researcher, Department of Geography, Palacký University Olomouc</div>
+        <div class="speaker-talk">Sensed, Felt, Mapped: People-Oriented Paradigm in Thermal Environment Research</div>
+      </div>
+    </div>
+    <div class="speaker-body">
+      <p>Veronika Květoňová capped Day 1 with a fascinating concrete example of how society's response to heat is a spatially quantifiable factor. Her human-oriented paradigm combines participatory mapping, thermal indices, micrometeorological measurements, remote sensing data, and numerical modelling into one framework. The thermal index is a combination of thermal comfort perception and sensor measurement — proof that the felt and the measured work in tandem.</p>
+    </div>
+  </div>
+
+  <p style="margin-top:1rem">Taken together, Day 1 iterated that maps go beyond what the human eye can see — because they are felt in the body, processed in the mind, and part memory. Maps have never just been a piece of paper. They describe our human world in ways that the world itself sometimes cannot.</p>
+
+  <div class="ornament">· · ·</div>
+
+  <!-- DAY 2 -->
+  <div class="day-header">
+    <span class="day-pill d2">Day 2</span>
+    <span class="day-title">Thursday 2nd April — Maps in Action</span>
+  </div>
+
+
+  <!-- STACHOŇ -->
+  <div class="speaker-block">
+    <div class="speaker-header">
+      <div class="speaker-flag">🇨🇿</div>
+      <div class="speaker-meta">
+        <div class="speaker-name"><a href="https://www.researchgate.net/profile/Zdenek-Stachon" target="_blank">Zdeněk Stachoň</a></div>
+        <div class="speaker-affil">Associate Professor, Department of Geography, Masaryk University</div>
+        <div class="speaker-talk">Satire and Aggression in Cartography: Maps as Instruments of Humor, Critique, and Propaganda</div>
+      </div>
+    </div>
+    <div class="speaker-body">
+      <p>Zdeněk Stachoň walked us through the long history of satire and aggression in cartography. One of my favorite examples of satirical cartography comes from <em>Terrible Maps</em> — an account that intentionally makes absurd, tongue-in-cheek maps that are so confidently wrong they become brilliant. But Stachoň's talk made me realize something unsettling: a satirical map is still a power move to make you laugh at someone without even realizing it.</p>
+    </div>
+  </div>
+
+  <!-- GRIFFIN -->
+  <div class="speaker-block">
+    <div class="speaker-header">
+      <div class="speaker-flag">🇦🇺</div>
+      <div class="speaker-meta">
+        <div class="speaker-name"><a href="https://www.rmit.edu.au/profiles/g/amy-griffin" target="_blank">Amy Griffin</a></div>
+        <div class="speaker-affil">Senior Lecturer in Geospatial Science, RMIT University Melbourne · Vice-President, ICA</div>
+        <div class="speaker-talk">Entanglements of Maps, Emergencies and Emotions</div>
+      </div>
+    </div>
+    <div class="speaker-body">
+      <p>Amy Griffin led a talk on maps and emergencies. Her research on next-generation multi-hazard warning platforms showed that emergency maps arrive in the hands of people who are in the middle of making life-or-death decisions — and this all falls in the emotional state of the map reader. She cited the Victoria bushfires where the VicEmergency interactive map synthesized human intel and sensor data into near real-time fire boundaries that the public could watch shift and expand alongside first responders.</p>
+    </div>
+  </div>
+
+  <!-- FISH -->
+  <div class="speaker-block">
+    <div class="speaker-header">
+      <div class="speaker-flag">🇺🇸</div>
+      <div class="speaker-meta">
+        <div class="speaker-name"><a href="https://www.carolynfish.com" target="_blank">Carolyne Fish</a></div>
+        <div class="speaker-affil">Assistant Professor of Geography, University of Oregon · Vice Chair, ICA Sustainable Development Commission</div>
+        <div class="speaker-talk">Mapping for Change</div>
+      </div>
+    </div>
+    <div class="speaker-body">
+      <p>Carolyne Fish focused squarely on her research at the intersection of cartography and environmental communication. She cited her work on narrative transportation — the extent to which a reader is drawn into a story. Transporting stories lead readers to develop strong emotions and motivations about the content, physically and psychologically immerse themselves, and take on beliefs, attitudes, and behaviors implied in the story.</p>
+    </div>
+  </div>
+
+  <!-- MITAS -->
+  <div class="speaker-block">
+    <div class="speaker-header">
+      <div class="speaker-flag">🇸🇰</div>
+      <div class="speaker-meta">
+        <div class="speaker-name"><a href="https://pure.buas.nl/en/persons/ondrej-mitas" target="_blank">Ondrej Mitas</a></div>
+        <div class="speaker-affil">Senior Lecturer, Academy for Tourism, Breda University of Applied Sciences, Netherlands</div>
+        <div class="speaker-talk">Measurement, Modeling, and Management: Closing the Circle Between Emotion Data and Spatial Intervention</div>
+      </div>
+    </div>
+    <div class="speaker-body">
+      <p>Born in Bratislava and now based at Breda University in the Netherlands, Ondrej Mitas has used wearable sensors and biophysical data to measure how people feel as they move through space — and uses this to improve the spaces themselves. This makes me think of how understanding and managing tourism event experiences requires insight into how emotions unfold across space. Mayhaps this quantifies why we slow down in placid old town spots and rush in city squares.</p>
+    </div>
+  </div>
+
+  <!-- KONÍČEK -->
+  <div class="speaker-block">
+    <div class="speaker-header">
+      <div class="speaker-flag">🇨🇿</div>
+      <div class="speaker-meta">
+        <div class="speaker-name"><a href="https://www.geoinformatics.upol.cz/en/member/jakub_konicek" target="_blank">Jakub Koníček</a></div>
+        <div class="speaker-affil">Assistant Professor, Department of Geoinformatics, Palacký University Olomouc</div>
+        <div class="speaker-talk">How Design Decisions Shape the Meaning of Maps and Data Visualizations</div>
+      </div>
+    </div>
+    <div class="speaker-body">
+      <p>Jakub Koníček then talked about how elements like font choice, color, hierarchy, and symbol are not neutral. I liked how he stressed that subtle design choices can alter how a map is trusted. Aesthetic and communicative power is one of the things I consider when designing my maps — and this validated my process.</p>
+    </div>
+  </div>
+
+  <!-- MUEHLENHAUS -->
+  <div class="speaker-block">
+    <div class="speaker-header">
+      <div class="speaker-flag">🇺🇸</div>
+      <div class="speaker-meta">
+        <div class="speaker-name"><a href="https://www.webmapgpt.com/" target="_blank">Ian Muehlenhaus</a></div>
+        <div class="speaker-affil">AI Product Engineer · Former Director, GIS Professional MS Program, University of Wisconsin-Madison · ICA Commission on Map Design</div>
+        <div class="speaker-talk">Prompt Cartography: Natural Language Mapmaking for Everybody</div>
+      </div>
+    </div>
+    <div class="speaker-body">
+      <p>Ian Muehlenhaus closed with the most prescient topic: Prompt Cartography. It was great to address the elephant in the room that was AI — and we got to do so with the idea that natural language could become the primary interface for mapmaking. As a former professor turned AI Product Engineer, he enticed us with the possibility that the ability to describe a map in words might soon be all you need to make one. However, this does make me curious about authorship, and what it even means to be a cartographer in an age of generative AI.</p>
+    </div>
+  </div>
+
+  <img src="documentation (2).jpeg">
+
+  <!-- CLOSING -->
+  <div class="closing">
+    <h2>Full Circle</h2>
+    <p>The International Spring School on Visualization brought seasoned cartographers from all walks of life and I realized how maps go beyond their spatial functionality. Maps are political and sensory. They are weapons. Sitting with all of this as a Filipino countercartographer, KARTANG-ISIP was always trying to do exactly what they theorized. We must reclaim space, center feeling, and insist that the communities most vulnerable to climate change are also the most capable of imagining — and mapping! — their own futures.</p>
+    <p>This art became an opportunity to rediscover the comfort and gentle radiance it brought to me in writing word by word, and building world by world. Layered with the myths I grew up with, I return to the whispers of tales that once left younger me fascinated. Even as a writer, I had never regarded myself as an artist — until I began shaping worlds through the lens of climate fiction. Art, I realized, was not confined to strokes of pigment on a page, because it could be the world we reimagine or a language to speak for the planet. This is the culmination of my journey as both scientist and storyteller for the people and the planet.</p>
+    <p>Somewhere, someone may read this story and find not fear in their homes, but hope in being part of the solution. The future is scary, but it only happens one day at a time. May this story serve as a compass toward hope.</p>
+  </div>
+
+</div>
+
+<a
+  href="https://www.geoinformatics.upol.cz/iss/"
+  target="_blank"
+  style="
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    background: rgba(0,0,0,0.75);
+    color: white;
+    text-decoration: none;
+    border-radius: 999px;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    z-index: 9999;
+    backdrop-filter: blur(8px);
+  "
+>
+  Check out ISSonVIS at the official UPOL website.
+</a>
+
+<footer>
+  <p>ISSonVIS 2026 · Emotions and Maps: The Affective Dimension of Visualisation · University of Olomouc, Czech Republic</p>
+  <p style="margin-top:0.5rem"><a href="https://www.geoinformatics.upol.cz/" target="_blank">Department of Geoinformatics, Palacký University Olomouc</a></p>
+</footer>
+
+<script>
+const map = L.map('map', { zoomControl: true, scrollWheelZoom: false }).setView([30, 15], 2);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap contributors © CARTO',
+  subdomains: 'abcd',
+  maxZoom: 19
+}).addTo(map);
+
+const d1Color = '#c0392b';
+const d2Color = '#2c3e7a';
+
+function makeIcon(color) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    popupAnchor: [0, -10]
+  });
+}
+
+const speakers = [
+  {
+    name: 'Georg Gartner',
+    talk: 'Emotion in Cartographic Theory',
+    inst: 'TU Wien, Austria',
+    lat: 48.2082, lng: 16.3738, day: 1,
+    url: 'https://cartography.tuwien.ac.at/georg-gartner/'
+  },
+  {
+    name: 'Jiří Pánek',
+    talk: 'Emotional Mapping – From Theory to Practice',
+    inst: 'Palacký University Olomouc, Czech Republic',
+    lat: 49.5939, lng: 17.2509, day: 1,
+    url: 'https://participatorymapping.icaci.org/author/jiri-panek/'
+  },
+  {
+    name: 'Merve Keskin',
+    talk: 'Sensing Human, Sensing Environment',
+    inst: 'University of Salzburg, Austria (originally Turkey)',
+    lat: 39.9334, lng: 32.8597, day: 1,
+    url: 'https://drmervekeskin.wordpress.com/'
+  },
+  {
+    name: 'Dennis Edler',
+    talk: 'Cartography Between Perception, Power and Conflict',
+    inst: 'Ruhr-University Bochum, Germany',
+    lat: 51.4818, lng: 7.2162, day: 1,
+    url: 'https://www.geographie.ruhr-uni-bochum.de/mitarbeiter/dennis_edler_00136.html.en'
+  },
+  {
+    name: 'Petra Hypšová',
+    talk: 'Recognising Human Emotions, Recognising Maps',
+    inst: 'Palacký University Olomouc, Czech Republic',
+    lat: 49.60, lng: 17.27, day: 1,
+    url: 'https://www.researchgate.net/profile/Petra-Hypsova'
+  },
+  {
+    name: 'Veronika Květoňová',
+    talk: 'Sensed, Felt, Mapped',
+    inst: 'Palacký University Olomouc, Czech Republic',
+    lat: 49.58, lng: 17.24, day: 1,
+    url: 'https://geography.upol.cz/veronika-kvetonova-en'
+  },
+  {
+    name: 'Zdeněk Stachoň',
+    talk: 'Maps as Instruments of Humor, Critique, and Propaganda',
+    inst: 'Masaryk University, Brno, Czech Republic',
+    lat: 49.1951, lng: 16.6068, day: 2,
+    url: 'https://www.researchgate.net/profile/Zdenek-Stachon'
+  },
+  {
+    name: 'Amy Griffin',
+    talk: 'Entanglements of Maps, Emergencies and Emotions',
+    inst: 'RMIT University, Melbourne, Australia',
+    lat: -37.8136, lng: 144.9631, day: 2,
+    url: 'https://www.rmit.edu.au/profiles/g/amy-griffin'
+  },
+  {
+    name: 'Carolyne Fish',
+    talk: 'Mapping for Change',
+    inst: 'University of Oregon, USA',
+    lat: 44.0452, lng: -123.0781, day: 2,
+    url: 'https://www.carolynfish.com'
+  },
+  {
+    name: 'Ondrej Mitas',
+    talk: 'Closing the Circle Between Emotion Data and Spatial Intervention',
+    inst: 'Breda University of Applied Sciences, Netherlands',
+    lat: 51.5719, lng: 4.7683, day: 2,
+    url: 'https://pure.buas.nl/en/persons/ondrej-mitas'
+  },
+  {
+    name: 'Jakub Koníček',
+    talk: 'How Design Decisions Shape the Meaning of Maps',
+    inst: 'Palacký University Olomouc, Czech Republic',
+    lat: 49.57, lng: 17.26, day: 2,
+    url: 'https://www.geoinformatics.upol.cz/en/member/jakub_konicek'
+  },
+  {
+    name: 'Ian Muehlenhaus',
+    talk: 'Prompt Cartography: Natural Language Mapmaking for Everybody',
+    inst: 'University of Wisconsin-Madison, USA (now Esri)',
+    lat: 43.0731, lng: -89.4012, day: 2,
+    url: 'https://www.webmapgpt.com/'
+  }
+];
+
+speakers.forEach(s => {
+  const color = s.day === 1 ? d1Color : d2Color;
+  const marker = L.marker([s.lat, s.lng], { icon: makeIcon(color) }).addTo(map);
+  marker.bindPopup(`
+    <div class="popup-name">${s.name}</div>
+    <div class="popup-talk">${s.talk}</div>
+    <div class="popup-inst">${s.inst}</div>
+    <div style="margin-top:6px"><a href="${s.url}" target="_blank" style="font-size:12px;color:#c0392b;">View profile →</a></div>
+  `);
+});
+</script>
+</body>
+</html>
